@@ -1,0 +1,4 @@
+Jacobi sequencial: 0.000161 segundos
+Jacobi paralelo: 0.000099 segundos
+
+speed-up: 0.000161/0.000099 = 1,6263

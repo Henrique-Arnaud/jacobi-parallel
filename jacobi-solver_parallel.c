@@ -4,7 +4,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <math.h>
-#include <time.h>
+#include <mpi.h>
 
 void matrixSolverJacobi(float *__restrict__ A,
                         float *__restrict__ b,
@@ -76,15 +76,17 @@ int check(float *a, float *b, const unsigned int size, const float err)
 double measureExecutionTime(void (*function)(float *A, float *b, float *x0, float *x1, const float inErr, const unsigned int m, const unsigned int n),
                             float *A, float *b, float *x0, float *x1, const float inErr, const unsigned int m, const unsigned int n)
 {
-  clock_t start = clock();
+  double startTime, endTime;
+  startTime = MPI_Wtime();
   function(A, b, x0, x1, inErr, m, n);
-  clock_t end = clock();
+  endTime = MPI_Wtime();
 
-  return ((double)(end - start)) / CLOCKS_PER_SEC;
+  return endTime - startTime;
 }
 
-int main(int ac, char **av)
+int main(int argc, char **argv)
 {
+  int rank, size;
   FILE *inFile = NULL;
   float *A;
   float *b;
@@ -96,6 +98,10 @@ int main(int ac, char **av)
   unsigned int aux;
   unsigned int m;
   unsigned int n;
+
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   inFile = stdin;
   assert(inFile != NULL);
@@ -118,15 +124,19 @@ int main(int ac, char **av)
 
   double executionTime = measureExecutionTime(matrixSolverJacobi, A, b, x0, x1, err, m, n);
 
-  printf("%d\n", check(x1, xG, n, err));
+  if (rank == 0)
+  {
+    printf("%d\n", check(x1, xG, n, err));
+    printf("Tempo de execução: %.6f segundos\n", executionTime);
+  }
 
-  printf("Tempo de execução: %.6f segundos\n", executionTime);
-  
   free(A);
   free(b);
   free(x0);
   free(x1);
   free(xG);
   fclose(inFile);
+
+  MPI_Finalize();
   return EXIT_SUCCESS;
 }
